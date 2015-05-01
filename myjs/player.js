@@ -2,16 +2,9 @@
  * Created by Reginald on 4/30/2015.
  */
 
-function CreatePlayer(scene, dynamicsWorld){
+function CreatePlayer(scene, dynamicsWorld, controls){
 
-
-
-
-    /*this.physicsInfo.shape = new Ammo.btBoxShape(new Ammo.btVector3(
-        this.size.x/2, this.size.y/2, this.size.z/2));*/
-
-    this.physicsInfo.shape = new Ammo.btCylinderShape(new Ammo.btVector3(
-        this.size.x/2, this.size.y/2, this.size.z/2));
+    this.physicsInfo.shape = new Ammo.btBoxShape(new Ammo.btVector3(        this.size.x/2, this.size.y/2, this.size.z/2));
 
     this.physicsInfo.transform = new Ammo.btTransform();
     this.physicsInfo.transform.setIdentity();
@@ -34,18 +27,26 @@ function CreatePlayer(scene, dynamicsWorld){
     this.physicsInfo.body.setActivationState(DISABLE_DEACTIVATION);
     dynamicsWorld.addRigidBody(this.physicsInfo.body);
 
-    this.geometry = new THREE.BoxGeometry(this.length,this.width,1);
+    this.geometry = new THREE.BoxGeometry(this.size.x,this.size.y, this.size.z);
     this.material = new THREE.MeshBasicMaterial({color: 0XFFFF00});
     this.mesh = new THREE.Mesh(this.geometry, this.material);
     //don't use three.js's update functions since we're using physics
     this.mesh.matrixAutoUpdate = false;
     scene.add(this.mesh);
+	
+	//make the camera a child of the player
+	this.mesh.add(camera);
+	camera.position.set(0,3,5);
+
+	
+	this.controls = controls;
 }
 
 var PlayerProto = {
+    controls: undefined,
     name: "player",
     size: {x:1, y:1, z:1},
-    startingPos: {x:0, y:5, z:0},
+    startingPos: {x:5, y:5, z:0},
     segments: 1,
     geometry: undefined,
     material: undefined,
@@ -56,7 +57,7 @@ var PlayerProto = {
         var trans=this.physicsInfo.body.getWorldTransform(trans);
         var mat = this.mesh.matrixWorld;
         AmmoPhysicsHelper.b2three(trans,mat);
-        // get camera direction
+        /*// get camera direction
         var dir3 = new THREE.Vector3();
         this.controls.getDirection(dir3);
         // convert to Ammo vector, project to plane
@@ -64,10 +65,10 @@ var PlayerProto = {
         var yUnit = new Ammo.btVector3(0,1,0);
         dir.normalize();
         // right direction is dir X yUnit
-        var right = dir.cross(yUnit);
+        var right = dir.cross(yUnit);*/
 
         // set up physics for next time
-        var velV = new Ammo.btVector3(0,-1,0);
+       /* var velV = new Ammo.btVector3(0,-1,0);
         if (this.ahead)
             velV.op_add(dir);
         if (this.right)
@@ -78,7 +79,7 @@ var PlayerProto = {
             velV.op_sub(dir);
         velV.normalize();
         velV.op_mul(this.speed);
-        this.physicsInfo.body.setLinearVelocity( velV );
+        this.physicsInfo.body.setLinearVelocity( velV );*/
     },
 
 };

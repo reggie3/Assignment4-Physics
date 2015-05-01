@@ -6,15 +6,17 @@
     <script src="js/three.js"></script>
     <script src="js/threex.sportballs.js"></script>
     <script src="js/orbitControls.js"></script>
-    <script src="js/ammo.js"></script>
+    <script src="js/ammo.small.js"></script>
     <script src="js/base64-binary.js"></script>
     <script src="myjs/soundEngine.js"></script>
     <script src="myjs/floor.js"></script>
     <script src="myjs/player.js"></script>
+	<script src="myjs/ball.js"></script>
     <script src="myjs/ammoPhysicsHelper.js"></script>
     <script src="sounds/mp3B64Test.js"></script>
     <script>
         var camera, renderer, scene, controls, dynamicsWorld, physicsObjects={};
+		var MAX_BALLS = 1;
         var init = function() {
 
             var canvas = document.getElementsByTagName("canvas")[0];
@@ -36,6 +38,7 @@
             );
             //camera.position.set( 0, 30, 75 );
             camera.position.set( 0, 5, 40 );
+			scene.add(camera);
             controls = new THREE.OrbitControls(camera,canvas);
 
             SoundEngineProto.init();
@@ -46,11 +49,22 @@
             //initialize physics engine
             dynamicsWorld = AmmoPhysicsHelper.initPhysics();
             //create the floor
-            var floor = new CreateFloor(scene);
-            var player = new CreatePlayer(scene, dynamicsWorld);
+            var floor = new CreateFloor(scene, dynamicsWorld);
+			physicsObjects[floor.name] = floor;
+			physicsObjects[floor.name].updateAble=false;	//no need to update the floor every frame
+			
+			//create the player
+            var player = new CreatePlayer(scene, dynamicsWorld, controls);
             physicsObjects[player.name] = player;
+			physicsObjects[player.name].updateAble=true;
             camera.lookAt(player.mesh);
 
+			//create some balls
+			for(var i=0; i<MAX_BALLS; i++){
+				var ball = new Ball(scene, dynamicsWorld);
+				 physicsObjects[ball.name] = ball;
+					physicsObjects[ball.name].updateAble=true;
+			}
 
             /*var testCube = new THREE.Mesh(new THREE.BoxGeometry(1,1,1),
                     new THREE.MeshBasicMaterial());
@@ -70,7 +84,9 @@
                        /* var trans = physicsObjects[key].physicsInfo.body.getWorldTransform(AmmoPhysicsHelper.getTrans());
                         var mat = physicsObjects[key].mesh.matrixWorld;
                         AmmoPhysicsHelper.b2three(trans,mat);*/
-                        physicsObjects[key].update(dt);
+						if(physicsObjects[key].updateAble){
+							physicsObjects[key].update(dt);
+						}
                     }
                 }
 
@@ -107,9 +123,52 @@
             scene.add( hemisphereLight );
         }
 
+		function onKeyUp(evt) {
+    switch (evt.keyCode) {
+      case 65: // 'a'
+        index = 0;
+        fps.left = false;
+        break;
+      case 68: // 'd'
+        index = 1;
+        fps.right = false;
+        break;
+      case 87: // 'w'
+        index = 3;
+        fps.ahead = false;
+        break;
+      case 83: // 's'
+        index = 2;
+        fps.back = false;
+        break;
+      case 32: // spacebar
+        fps.mainOn = false; 
+        break;
+    }
+  }
+  
         function onKeyDown(evt){
             var result;
             switch (evt.keyCode) {
+			case 65: // 'a'
+        index = 0;
+        fps.left = true; 
+        break;
+      case 68: // 'd'
+        index = 1;
+        fps.right = true; 
+        break;
+      case 87: // 'w'
+        index = 3;
+        fps.ahead = true; 
+        break;
+      case 83: // 's'
+        index = 2;
+        fps.back = true; 
+        break;
+      case 32: // spacebar
+        fps.mainOn = true; 
+        break;
                 case 72: // 'h'
                     for (var i = 0; i < goalPositionArray.length; i++) {
                         goalPositionArray[i].toggleVisibility();
