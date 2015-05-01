@@ -2,9 +2,150 @@
 <html>
 <head lang="en">
     <meta charset="UTF-8">
-    <title></title>
+    <title>Assignment 4: Physics</title>
+    <script src="js/three.js"></script>
+    <script src="js/threex.sportballs.js"></script>
+    <script src="js/orbitControls.js"></script>
+    <script src="js/ammo.js"></script>
+    <script src="js/base64-binary.js"></script>
+    <script src="myjs/soundEngine.js"></script>
+    <script src="myjs/floor.js"></script>
+    <script src="myjs/player.js"></script>
+    <script src="myjs/ammoPhysicsHelper.js"></script>
+    <script src="sounds/mp3B64Test.js"></script>
+    <script>
+        var camera, renderer, scene, controls, dynamicsWorld, physicsObjects={};
+        var init = function() {
+
+            var canvas = document.getElementsByTagName("canvas")[0];
+            var w = canvas.clientWidth;
+            var h = canvas.clientHeight;
+
+            renderer = new THREE.WebGLRenderer({canvas:canvas});
+            renderer.setSize( w, h );
+            renderer.setClearColor(new THREE.Color(0x00B2FF), 1);
+
+            scene = new THREE.Scene();
+            scene.matrixAutoUpdate = false; //using physics to do the update
+
+            camera = new THREE.PerspectiveCamera(
+                    15,     // Field of view
+                    w / h,  // Aspect ratio
+                    0.1,    // Near
+                    10000   // Far
+            );
+            //camera.position.set( 0, 30, 75 );
+            camera.position.set( 0, 5, 40 );
+            controls = new THREE.OrbitControls(camera,canvas);
+
+            SoundEngineProto.init();
+            SoundEngineProto.loadSoundFromBase64Buffer(mp3B64Test, "mp3B64Test");
+
+            //add the lights to the scene
+            addLights();
+            //initialize physics engine
+            dynamicsWorld = AmmoPhysicsHelper.initPhysics();
+            //create the floor
+            var floor = new CreateFloor(scene);
+            var player = new CreatePlayer(scene, dynamicsWorld);
+            physicsObjects[player.name] = player;
+            camera.lookAt(player.mesh);
+
+
+            /*var testCube = new THREE.Mesh(new THREE.BoxGeometry(1,1,1),
+                    new THREE.MeshBasicMaterial());
+            scene.add(testCube);*/
+            var clock = new THREE.Clock();
+
+            var render = function() {
+                var dt = clock.getDelta();
+                controls.update(dt);
+                dynamicsWorld.stepSimulation(dt,1);
+
+                //move all the physics objects
+                // move body (block)
+
+                for(var key in physicsObjects) {
+                    if (physicsObjects.hasOwnProperty(key)) {
+                       /* var trans = physicsObjects[key].physicsInfo.body.getWorldTransform(AmmoPhysicsHelper.getTrans());
+                        var mat = physicsObjects[key].mesh.matrixWorld;
+                        AmmoPhysicsHelper.b2three(trans,mat);*/
+                        physicsObjects[key].update(dt);
+                    }
+                }
+
+
+
+                renderer.render(scene,camera);
+                requestAnimationFrame(render);
+            };
+
+            requestAnimationFrame(render);
+        };
+
+        //light adding function
+        function addLights(){
+            var directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5 );
+            directionalLight.position.set( 0, 1, 0 );
+            var lights = [];
+            lights[0] = new THREE.PointLight( 0xffffff, 1, 0 );
+            lights[1] = new THREE.PointLight( 0xffffff, 1, 0 );
+            lights[2] = new THREE.PointLight( 0xffffff, 1, 0 );
+
+            lights[0].position.set( 0, 200, 0 );
+            lights[1].position.set( 100, 200, 100 );
+            lights[2].position.set( -100, -200, -100 );
+
+            scene.add( lights[0] );
+            scene.add( lights[1] );
+            scene.add( lights[2] );
+            scene.add( directionalLight );
+
+            var ambient = new THREE.AmbientLight( 0x404040  );
+            scene.add( ambient );
+            var hemisphereLight = new THREE.HemisphereLight( 0x404040  );
+            scene.add( hemisphereLight );
+        }
+
+        function onKeyDown(evt){
+            var result;
+            switch (evt.keyCode) {
+                case 72: // 'h'
+                    for (var i = 0; i < goalPositionArray.length; i++) {
+                        goalPositionArray[i].toggleVisibility();
+                    }
+                    break;
+                case 67: // 'c'
+                    currentCameraMode++;
+                    if (currentCameraMode === cameraModes.length) {
+                        currentCameraMode = 0;
+                    }
+                    document.getElementById("cameraMode").innerHTML = "Camera mode: " +
+                            cameraModes[currentCameraMode];
+                    console.log("change camera");
+                    break;
+                case 83: //'s' play sound test
+                    //SoundEngineProto.createPanner({name: "mp3B64Test", gain: 20});
+                    SoundEngineProto.playSoundFromBuffer("mp3B64Test");
+                    break;
+            }
+        }
+        function onWindowResize(){
+
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+
+            renderer.setSize( window.innerWidth, window.innerHeight );
+
+        }
+        //window.onload = init;
+        window.addEventListener( 'load', init, false );
+        window.addEventListener( 'resize', onWindowResize, false );
+        window.addEventListener('keydown', onKeyDown, false );
+    </script>
+
 </head>
 <body>
-
+<canvas style="width:100%;height:95%;border:1px gray solid;">
 </body>
 </html>
