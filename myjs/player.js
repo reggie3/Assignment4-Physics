@@ -13,10 +13,9 @@ function CreatePlayer(scene, dynamicsWorld, controls){
 
     var localInertia=new Ammo.btVector3(0,0,0);
     var motionState = new Ammo.btDefaultMotionState( this.physicsInfo.transform );
-    var mass=2;
-    this.physicsInfo.shape.calculateLocalInertia(mass, localInertia);
+    this.physicsInfo.shape.calculateLocalInertia(this.mass, localInertia);
 
-    var constructionInfo = new Ammo.btRigidBodyConstructionInfo(mass, motionState, this.physicsInfo.shape, localInertia);
+    var constructionInfo = new Ammo.btRigidBodyConstructionInfo(this.mass, motionState, this.physicsInfo.shape, localInertia);
     this.physicsInfo.body=new Ammo.btRigidBody(constructionInfo);
     this.physicsInfo.body.setWorldTransform(this.physicsInfo.transform);
 
@@ -42,13 +41,16 @@ function CreatePlayer(scene, dynamicsWorld, controls){
     /*this.controls = controls;
     this.mesh.add(this.controls.getObject());
     this.controls.getObject().position.set(0, this.size.y/2, 0);*/
+
+    this.linearVelocity = new Ammo.btVector3(0,-1,0);
 }
 
 var PlayerProto = {
+    mass: 100,
     controls: undefined,
     name: "player",
     size: {x:.1, y:.5, z:.1},
-    startingPos: {x:0, y:5, z:0},
+    startingPos: {x:0, y:1, z:0},
     segments: 1,
     geometry: undefined,
     material: undefined,
@@ -59,12 +61,16 @@ var PlayerProto = {
     right : false,
     left : false,
     back : false,
-    speed : 0.1,
+    speed : 1,
+    linearVelocity: null,
+
     update : function(dt){
         // move objects
         var trans=this.physicsInfo.body.getWorldTransform(trans);
         var mat = this.mesh.matrixWorld;
         AmmoPhysicsHelper.b2three(trans,mat);
+
+
 
         // get camera direction
         var dir3 = new THREE.Vector3();
@@ -79,6 +85,7 @@ var PlayerProto = {
 
         //
         // set up physics for next time
+        // set up physics for next time
         var velV = new Ammo.btVector3(0,-1,0);
         if (this.ahead)
             velV.op_add(dir);
@@ -91,6 +98,7 @@ var PlayerProto = {
         velV.normalize();
         velV.op_mul(this.speed);
         this.physicsInfo.body.setLinearVelocity( velV );
+
         //console.log("player update");
     }
 

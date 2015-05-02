@@ -7,18 +7,19 @@
     <script src="js/threex.sportballs.js"></script>
     <script src="js/orbitControls.js"></script>
     <script src="js/PointerLockAngleControls.js"></script>
-    <script src="js/ammo.small.js"></script>
+    <!--<script src="js/ammo.small.js"></script>-->
     <script src="js/base64-binary.js"></script>
     <script src="myjs/soundEngine.js"></script>
     <script src="myjs/floor.js"></script>
     <script src="myjs/player.js"></script>
     <!--<script src="myjs/ball.js"></script>
     <script src="myjs/MyPlanets.js"></script>-->
-    <script src="myjs/ammoPhysicsHelper.js"></script>
+    <script src="js/cannon.js"></script>
+    <!--<script src="myjs/ammoPhysicsHelper.js"></script>-->
     <script src="myjs/soccerField.js"></script>
     <script src="sounds/mp3B64Test.js"></script>
     <script>
-        var clock, camera, renderer, canvas, scene, controls, dynamicsWorld, physicsObjects={};
+        var cannonWorld, clock, camera, renderer, canvas, scene, controls, dynamicsWorld, physicsObjects={};
         var MAX_BALLS = 1;
         var init = function() {
 
@@ -32,13 +33,16 @@
             renderer.setClearColor(new THREE.Color(0x3333dd), 1);
 
             scene = new THREE.Scene();
+            cannonWorld = new CANNON.World();
+            cannonWorld.gravity.set(0, 0, -9.82); // m/s²
+
             scene.matrixAutoUpdate = false; //using physics to do the update
 
             camera = new THREE.PerspectiveCamera(
                     15,     // Field of view
                     w / h,  // Aspect ratio
                     0.1,    // Near
-                    100   // Far
+                    10000   // Far
             );
             //camera.position.set( 0, 0, -30 );
             camera.position.set( 15, 5, 10 );
@@ -52,16 +56,17 @@
             //add the lights to the scene
             addLights();
             //initialize physics engine
-            dynamicsWorld = AmmoPhysicsHelper.initPhysics();
+            //dynamicsWorld = AmmoPhysicsHelper.initPhysics();
             //create the floor
             /*var floor = new CreateFloor(scene, dynamicsWorld);
             physicsObjects[floor.name] = floor;
             physicsObjects[floor.name].updateAble=false;	//no need to update the floor every frame*/
 
             //create the player
-            var player = new CreatePlayer(scene, dynamicsWorld, controls);
+            //var player = new CreatePlayer(scene, dynamicsWorld, controls);
+           /* var player = new CreatePlayer(scene, cannonWorld, controls);
             physicsObjects[player.name] = player;
-            physicsObjects[player.name].updateAble=true;
+            physicsObjects[player.name].updateAble=true;*/
             //camera.lookAt(player.mesh);
 
 
@@ -70,7 +75,8 @@
                 console.log( item, loaded, total );
             };
 
-            var soccerField = new SoccerField(scene, dynamicsWorld, manager);
+            var soccerField = new SoccerField(scene, cannonWorld, manager);
+            //var soccerField = new SoccerField(scene, dynamicsWorld, manager);
             /*//create some balls
             for(var i=0; i<MAX_BALLS; i++){
                 var ball = new Ball(scene, dynamicsWorld);
@@ -88,11 +94,14 @@
         };
 
         function render(){
+            var fixedTimeStep = 1.0 / 60.0; // seconds
+            var maxSubSteps = 3;
+
             var dt = clock.getDelta();
             //controls.update(dt);
-            dynamicsWorld.stepSimulation(dt,1);
+            //dynamicsWorld.stepSimulation(dt,1);
 
-            //move all the physics objects
+            /*//move all the physics objects
             for(var key in physicsObjects) {
                 if (physicsObjects.hasOwnProperty(key)) {
                      var trans = physicsObjects[key].physicsInfo.body.getWorldTransform(AmmoPhysicsHelper.getTrans());
@@ -102,8 +111,9 @@
                         physicsObjects[key].update(dt);
                     }
                 }
-            }
-            SoccerFieldProto.update(dt);
+            }*/
+            cannonWorld.step(dt);
+            SoccerFieldProto.update(cannonWorld);
             controls.update(dt);
             renderer.render(scene,camera);
             requestAnimationFrame(render);
@@ -232,6 +242,7 @@
         window.addEventListener( 'load', init, false );
         window.addEventListener( 'resize', onWindowResize, false );
         window.addEventListener('keydown', onKeyDown, false );
+        window.addEventListener('keyup', onKeyUp, false );
     </script>
 
 </head>
