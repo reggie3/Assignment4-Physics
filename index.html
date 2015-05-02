@@ -6,26 +6,30 @@
     <script src="js/three.js"></script>
     <script src="js/threex.sportballs.js"></script>
     <script src="js/orbitControls.js"></script>
+    <script src="js/PointerLockAngleControls.js"></script>
     <script src="js/ammo.small.js"></script>
     <script src="js/base64-binary.js"></script>
     <script src="myjs/soundEngine.js"></script>
     <script src="myjs/floor.js"></script>
     <script src="myjs/player.js"></script>
-	<script src="myjs/ball.js"></script>
+    <!--<script src="myjs/ball.js"></script>
+    <script src="myjs/MyPlanets.js"></script>-->
     <script src="myjs/ammoPhysicsHelper.js"></script>
+    <script src="myjs/soccerField.js"></script>
     <script src="sounds/mp3B64Test.js"></script>
     <script>
-        var camera, renderer, scene, controls, dynamicsWorld, physicsObjects={};
-		var MAX_BALLS = 1;
+        var clock, camera, renderer, canvas, scene, controls, dynamicsWorld, physicsObjects={};
+        var MAX_BALLS = 1;
         var init = function() {
 
-            var canvas = document.getElementsByTagName("canvas")[0];
+            canvas = document.getElementsByTagName("canvas")[0];
+            //canvas.addEventListener("mousedown", lockPointer, false);
             var w = canvas.clientWidth;
             var h = canvas.clientHeight;
 
             renderer = new THREE.WebGLRenderer({canvas:canvas});
             renderer.setSize( w, h );
-            renderer.setClearColor(new THREE.Color(0x00B2FF), 1);
+            renderer.setClearColor(new THREE.Color(0x3333dd), 1);
 
             scene = new THREE.Scene();
             scene.matrixAutoUpdate = false; //using physics to do the update
@@ -34,12 +38,13 @@
                     15,     // Field of view
                     w / h,  // Aspect ratio
                     0.1,    // Near
-                    10000   // Far
+                    100   // Far
             );
-            //camera.position.set( 0, 30, 75 );
-            camera.position.set( 0, 5, 40 );
-			scene.add(camera);
-            controls = new THREE.OrbitControls(camera,canvas);
+            //camera.position.set( 0, 0, -30 );
+            camera.position.set( 15, 5, 10 );
+            scene.add(camera);
+            //controls = new PointerLockAngleControls(camera);
+            controls = new THREE.OrbitControls(camera, canvas);
 
             SoundEngineProto.init();
             SoundEngineProto.loadSoundFromBase64Buffer(mp3B64Test, "mp3B64Test");
@@ -49,62 +54,78 @@
             //initialize physics engine
             dynamicsWorld = AmmoPhysicsHelper.initPhysics();
             //create the floor
-            var floor = new CreateFloor(scene, dynamicsWorld);
-			physicsObjects[floor.name] = floor;
-			physicsObjects[floor.name].updateAble=false;	//no need to update the floor every frame
-			
-			//create the player
+            /*var floor = new CreateFloor(scene, dynamicsWorld);
+            physicsObjects[floor.name] = floor;
+            physicsObjects[floor.name].updateAble=false;	//no need to update the floor every frame*/
+
+            //create the player
             var player = new CreatePlayer(scene, dynamicsWorld, controls);
             physicsObjects[player.name] = player;
-			physicsObjects[player.name].updateAble=true;
-            camera.lookAt(player.mesh);
-
-			//create some balls
-			for(var i=0; i<MAX_BALLS; i++){
-				var ball = new Ball(scene, dynamicsWorld);
-				 physicsObjects[ball.name] = ball;
-					physicsObjects[ball.name].updateAble=true;
-			}
-
-            /*var testCube = new THREE.Mesh(new THREE.BoxGeometry(1,1,1),
-                    new THREE.MeshBasicMaterial());
-            scene.add(testCube);*/
-            var clock = new THREE.Clock();
-
-            var render = function() {
-                var dt = clock.getDelta();
-                controls.update(dt);
-                dynamicsWorld.stepSimulation(dt,1);
-
-                //move all the physics objects
-                // move body (block)
-
-                for(var key in physicsObjects) {
-                    if (physicsObjects.hasOwnProperty(key)) {
-                       /* var trans = physicsObjects[key].physicsInfo.body.getWorldTransform(AmmoPhysicsHelper.getTrans());
-                        var mat = physicsObjects[key].mesh.matrixWorld;
-                        AmmoPhysicsHelper.b2three(trans,mat);*/
-						if(physicsObjects[key].updateAble){
-							physicsObjects[key].update(dt);
-						}
-                    }
-                }
+            physicsObjects[player.name].updateAble=true;
+            //camera.lookAt(player.mesh);
 
 
-
-                renderer.render(scene,camera);
-                requestAnimationFrame(render);
+            var manager = new THREE.LoadingManager();
+            manager.onProgress = function ( item, loaded, total ) {
+                console.log( item, loaded, total );
             };
 
-            requestAnimationFrame(render);
+            var soccerField = new SoccerField(scene, dynamicsWorld, manager);
+            /*//create some balls
+            for(var i=0; i<MAX_BALLS; i++){
+                var ball = new Ball(scene, dynamicsWorld);
+                physicsObjects[ball.name] = ball;
+                physicsObjects[ball.name].updateAble=true;
+            }
+
+            //create a sky so that we have a frame of reference
+            //StarField(scene);*/
+
+            clock = new THREE.Clock();
+
+            //call the renderer
+            render();
         };
+
+        function render(){
+            var dt = clock.getDelta();
+            //controls.update(dt);
+            dynamicsWorld.stepSimulation(dt,1);
+
+            //move all the physics objects
+            for(var key in physicsObjects) {
+                if (physicsObjects.hasOwnProperty(key)) {
+                     var trans = physicsObjects[key].physicsInfo.body.getWorldTransform(AmmoPhysicsHelper.getTrans());
+                     var mat = physicsObjects[key].mesh.matrixWorld;
+                     AmmoPhysicsHelper.b2three(trans,mat);
+                    if(physicsObjects[key].updateAble){
+                        physicsObjects[key].update(dt);
+                    }
+                }
+            }
+            SoccerFieldProto.update(dt);
+            controls.update(dt);
+            renderer.render(scene,camera);
+            requestAnimationFrame(render);
+        }
+
+        function lockPointer() {
+            console.log("lock pointer");
+            var element = document.body;
+            element.requestFullscreen = element.requestFullscreen || element.mozRequestFullscreen || element.mozRequestFullScreen || element.webkitRequestFullscreen;
+            element.requestFullscreen();
+            element.requestPointerLock = element.requestPointerLock || element.mozRequestPointerLock || element.webkitRequestPointerLock;
+            element.requestPointerLock();
+        }
+
+
 
         //light adding function
         function addLights(){
             var directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5 );
             directionalLight.position.set( 0, 1, 0 );
             var lights = [];
-            lights[0] = new THREE.PointLight( 0xffffff, 1, 0 );
+            /*lights[0] = new THREE.PointLight( 0xffffff, 1, 0 );
             lights[1] = new THREE.PointLight( 0xffffff, 1, 0 );
             lights[2] = new THREE.PointLight( 0xffffff, 1, 0 );
 
@@ -114,61 +135,70 @@
 
             scene.add( lights[0] );
             scene.add( lights[1] );
-            scene.add( lights[2] );
+            scene.add( lights[2] );*/
             scene.add( directionalLight );
 
             var ambient = new THREE.AmbientLight( 0x404040  );
             scene.add( ambient );
             var hemisphereLight = new THREE.HemisphereLight( 0x404040  );
-            scene.add( hemisphereLight );
+            //scene.add( hemisphereLight );
         }
 
-		function onKeyUp(evt) {
-    switch (evt.keyCode) {
-      case 65: // 'a'
-        index = 0;
-        fps.left = false;
-        break;
-      case 68: // 'd'
-        index = 1;
-        fps.right = false;
-        break;
-      case 87: // 'w'
-        index = 3;
-        fps.ahead = false;
-        break;
-      case 83: // 's'
-        index = 2;
-        fps.back = false;
-        break;
-      case 32: // spacebar
-        fps.mainOn = false; 
-        break;
-    }
-  }
-  
+        function onKeyUp(evt) {
+            var index;
+            switch (evt.keyCode) {
+                case 37: // left arrow
+                case 65: // 'a'
+                    index = 0;
+                    physicsObjects["player"].left = false;
+                    break;
+                case 39: // right arrow
+                case 68: // 'd'
+                    index = 1;
+                    physicsObjects["player"].right = false;
+                    break;
+                case 38: // up arrow
+                case 87: // 'w'
+                    index = 3;
+                    physicsObjects["player"].ahead = false;
+                    break;
+                case 40: // down arrow
+                case 83: // 's'
+                    index = 2;
+                    physicsObjects["player"].back = false;
+                    break;
+                case 32: // spacebar
+                    physicsObjects["player"].mainOn = false;
+                    break;
+            }
+        }
+
         function onKeyDown(evt){
             var result;
             switch (evt.keyCode) {
-			case 65: // 'a'
-        index = 0;
-        fps.left = true; 
-        break;
-      case 68: // 'd'
-        index = 1;
-        fps.right = true; 
-        break;
-      case 87: // 'w'
-        index = 3;
-        fps.ahead = true; 
-        break;
-      case 83: // 's'
-        index = 2;
-        fps.back = true; 
-        break;
-      case 32: // spacebar
-        fps.mainOn = true; 
-        break;
+                case 37: // left arrow
+                case 65: // 'a'
+                    index = 0;
+                    physicsObjects["player"].left = true;
+                    break;
+                case 39: // right arrow
+                case 68: // 'd'
+                    index = 1;
+                    physicsObjects["player"].right = true;
+                    break;
+                case 38: // up arrow
+                case 87: // 'w'
+                    index = 3;
+                    physicsObjects["player"].ahead = true;
+                    break;
+                case 40: // down arrow
+                case 83: // 's'
+                    index = 2;
+                    physicsObjects["player"].back = true;
+                    break;
+                case 32: // spacebar
+                    physicsObjects["player"].mainOn = true;
+                    break;
                 case 72: // 'h'
                     for (var i = 0; i < goalPositionArray.length; i++) {
                         goalPositionArray[i].toggleVisibility();
@@ -198,6 +228,7 @@
 
         }
         //window.onload = init;
+
         window.addEventListener( 'load', init, false );
         window.addEventListener( 'resize', onWindowResize, false );
         window.addEventListener('keydown', onKeyDown, false );
@@ -205,6 +236,13 @@
 
 </head>
 <body>
-<canvas style="width:100%;height:95%;border:1px gray solid;">
+
+<canvas id="canvas" style="width:100%;height:95%;border:1px gray solid;"></canvas>
+    <div>Controls: </div>
+    <div>Movement</div>
+    <div>w - forward | a - left  | s - back   | d - right  </div>
+    <div>Or use the arrow keys</div>
+    <div>Use the mouse to look</div>
+    <div>Use the spacebar to fire</div>
 </body>
 </html>
